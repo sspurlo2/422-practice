@@ -7,6 +7,8 @@ const authRoutes = require('./routes/authRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const roleRoutes = require('./routes/roleRoutes');
+const workplaceRoutes = require('./routes/workplaceRoutes');
 
 // Import middleware
 const ErrorHandler = require('./middleware/errorHandler');
@@ -43,6 +45,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/workplaces', workplaceRoutes);
 
 // 404 handler
 app.use(ErrorHandler.handleNotFound);
