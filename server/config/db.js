@@ -3,35 +3,39 @@ require('dotenv').config();
 
 // Validate DATABASE_URL is set
 if (!process.env.DATABASE_URL) {
-  console.error('❌ ERROR: DATABASE_URL environment variable is not set!');
-  console.error('   Please create a .env file in the server directory with DATABASE_URL');
+  console.error('❌ WARNING: DATABASE_URL environment variable is not set!');
+  console.error('   Please set DATABASE_URL environment variable');
   console.error('   Example: DATABASE_URL=postgresql://user:password@localhost:5432/dbname');
-  // Don't exit in development - allow server to start but queries will fail gracefully
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
+  // Don't exit - allow server to start and handle database errors gracefully
+  // Cloud Run will set this via environment variables
+  console.warn('   Server will start but database queries will fail until DATABASE_URL is configured');
 }
 
 // Create PostgreSQL connection pool
-const pool = new Pool({
+// Only create pool if DATABASE_URL is set, otherwise create a dummy pool that will fail gracefully
+const pool = process.env.DATABASE_URL ? new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+}) : null;
 
-// Test database connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
-});
+// Test database connection (only if pool exists)
+if (pool) {
+  pool.on('connect', () => {
+    console.log('Connected to PostgreSQL database');
+  });
 
-pool.on('error', (err) => {
-  console.error('Database connection error:', err);
-  process.exit(-1);
-});
+  pool.on('error', (err) => {
+    console.error('Database connection error:', err);
+    // Don't exit on database errors - allow server to continue running
+    // Individual queries will handle errors gracefully
+    console.warn('Database connection error occurred, but server will continue running');
+  });
+}
 
 // Helper function to execute queries
 const query = async (text, params) => {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not configured. Please set it in your .env file.');
+  if (!pool || !process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not configured. Please set the DATABASE_URL environment variable.');
   }
   
   const start = Date.now();

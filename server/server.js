@@ -31,13 +31,30 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
+app.get('/health', async (req, res) => {
+  const healthStatus = {
     success: true,
     message: 'Flock Manager API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+    environment: process.env.NODE_ENV || 'development',
+    database: 'unknown'
+  };
+
+  // Check database connection if pool exists
+  if (pool) {
+    try {
+      await pool.query('SELECT 1');
+      healthStatus.database = 'connected';
+    } catch (err) {
+      healthStatus.database = 'disconnected';
+      healthStatus.databaseError = err.message;
+    }
+  } else {
+    healthStatus.database = 'not_configured';
+  }
+
+  // Return 200 even if database is not connected (server is still running)
+  res.status(200).json(healthStatus);
 });
 
 // API routes
@@ -58,8 +75,10 @@ app.use(ErrorHandler.handleError);
 process.on('SIGINT', async () => {
   console.log('\nReceived SIGINT. Gracefully shutting down...');
   try {
-    await pool.end();
-    console.log('Database connection closed.');
+    if (pool) {
+      await pool.end();
+      console.log('Database connection closed.');
+    }
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
@@ -70,8 +89,10 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   console.log('\nReceived SIGTERM. Gracefully shutting down...');
   try {
-    await pool.end();
-    console.log('Database connection closed.');
+    if (pool) {
+      await pool.end();
+      console.log('Database connection closed.');
+    }
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
