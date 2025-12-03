@@ -1,0 +1,40 @@
+# Cloud Build configuration for client only
+steps:
+  # Build the client Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/flock-manager-client:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/flock-manager-client:latest'
+      - '-f'
+      - 'client/Dockerfile'
+      - 'client'
+    id: 'build-client'
+
+  # Push the client image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/flock-manager-client:$COMMIT_SHA'
+    id: 'push-client-sha'
+    waitFor: ['build-client']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/flock-manager-client:latest'
+    id: 'push-client-latest'
+    waitFor: ['build-client']
+
+images:
+  - 'gcr.io/$PROJECT_ID/flock-manager-client:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/flock-manager-client:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1200s'
+

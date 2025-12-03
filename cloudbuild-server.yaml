@@ -1,0 +1,40 @@
+# Cloud Build configuration for server only
+steps:
+  # Build the server Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/flock-manager-server:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/flock-manager-server:latest'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-server'
+
+  # Push the server image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/flock-manager-server:$COMMIT_SHA'
+    id: 'push-server-sha'
+    waitFor: ['build-server']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/flock-manager-server:latest'
+    id: 'push-server-latest'
+    waitFor: ['build-server']
+
+images:
+  - 'gcr.io/$PROJECT_ID/flock-manager-server:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/flock-manager-server:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1200s'
+
