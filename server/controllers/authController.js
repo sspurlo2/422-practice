@@ -31,9 +31,6 @@ class AuthController {
       }
 
       if (!member) {
-      console.log(`🔐 Login request for email: ${email}`);
-      const member = await Member.findByEmail(email);
-      if (!member) {
         console.log(`⚠️  Member not found for email: ${email}`);
         // Don't reveal that email doesn't exist (security best practice)
         // Still return success to prevent email enumeration
@@ -43,33 +40,6 @@ class AuthController {
         });
       }
 
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const actionCodeSettings = {
-        url: `${baseUrl}/verify`,
-        handleCodeInApp: false,
-      };
-
-      let magicLink;
-      try {
-        const isFirebaseInitialized = admin.isInitialized && admin.isInitialized();
-
-        if (!isFirebaseInitialized && process.env.NODE_ENV !== 'production') {
-          const crypto = require('crypto');
-          const devToken = crypto.randomBytes(32).toString('hex');
-          const expiresAt = Date.now() + 15 * 60 * 1000;
-
-          if (!global.devTokens) global.devTokens = new Map();
-          global.devTokens.set(devToken, { email, memberId: member.id, expiresAt });
-
-          magicLink = `${baseUrl}/verify?token=${devToken}&email=${encodeURIComponent(email)}`;
-          console.log(`🔗 Development magic link generated: ${magicLink}`);
-        } else if (isFirebaseInitialized) {
-          magicLink = await admin.auth().generateSignInWithEmailLink(email, actionCodeSettings);
-          console.log(`✅ Magic link generated: ${magicLink.substring(0, 50)}...`);
-        } else {
-          throw new Error('Firebase is required in production mode but is not initialized');
-        }
-      } catch (firebaseError) {
       console.log(`✅ Member found: ${member.name} (${member.email})`);
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -111,18 +81,11 @@ class AuthController {
           console.log(`⚠️  Firebase error - using development mode:`, firebaseError.message);
           const crypto = require('crypto');
           const devToken = crypto.randomBytes(32).toString('hex');
-          const expiresAt = Date.now() + 15 * 60 * 1000;
-
-          if (!global.devTokens) global.devTokens = new Map();
-          global.devTokens.set(devToken, { email, memberId: member.id, expiresAt });
-
-          magicLink = `${baseUrl}/verify?token=${devToken}&email=${encodeURIComponent(email)}`;
-          console.log(`🔗 Development magic link generated: ${magicLink}`);
           const expiresAt = Date.now() + (15 * 60 * 1000); // 15 minutes
-          
+
           if (!global.devTokens) global.devTokens = new Map();
           global.devTokens.set(devToken, { email, memberId: member.id, expiresAt });
-          
+
           magicLink = `${baseUrl}/verify?token=${devToken}&email=${encodeURIComponent(email)}`;
           console.log(`🔗 Development magic link generated`);
           console.log(`📋 LOGIN LINK (copy this): ${magicLink}`);
