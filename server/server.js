@@ -80,7 +80,8 @@ process.on('SIGTERM', async () => {
 });
 
 // Start server
-app.listen(PORT, () => {
+// Listen on 0.0.0.0 to accept connections from Cloud Run
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Flock Manager API server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
