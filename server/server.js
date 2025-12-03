@@ -85,6 +85,11 @@ app.get('/health', async (req, res) => {
   res.status(200).json(healthStatus);
 });
 
+// Handle favicon requests (browsers automatically request this)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // 204 No Content - standard response for missing favicon
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/members', memberRoutes);

@@ -55,6 +55,60 @@ steps:
     id: 'push-client-latest'
     waitFor: ['build-client']
 
+  # Deploy server to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'flock-manager-server'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/flock-manager-server:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+    id: 'deploy-server'
+    waitFor: ['push-server-sha']
+
+  # Deploy client to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'flock-manager-client'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/flock-manager-client:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '80'
+      - '--memory'
+      - '256Mi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+    id: 'deploy-client'
+    waitFor: ['push-client-sha']
+
 images:
   - 'gcr.io/$PROJECT_ID/flock-manager-server:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/flock-manager-server:latest'

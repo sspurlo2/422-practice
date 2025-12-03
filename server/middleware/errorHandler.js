@@ -49,6 +49,11 @@ class ErrorHandler {
 
   // Handle 404 errors
   static handleNotFound(req, res, next) {
+    // Silently ignore favicon requests to avoid cluttering logs
+    if (req.originalUrl === '/favicon.ico') {
+      return res.status(204).end();
+    }
+    
     res.status(404).json({
       success: false,
       message: `Route ${req.originalUrl} not found`
