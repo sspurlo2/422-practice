@@ -1,20 +1,48 @@
+// Catch uncaught exceptions and unhandled rejections
+// Log but don't exit immediately - let the server try to start
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION!');
+  console.error(err.name, err.message);
+  console.error(err.stack);
+  // Only exit if it's a critical error
+  if (err.code === 'EADDRINUSE' || err.message.includes('listen')) {
+    console.error('Critical error - exiting');
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION at:', promise);
+  console.error('Reason:', reason);
+  // Don't exit on unhandled rejections - log and continue
+  // This allows the server to start even if some async operations fail
+});
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+console.log('Starting server initialization...');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+
 // Import routes
+console.log('Loading routes...');
 const authRoutes = require('./routes/authRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const workplaceRoutes = require('./routes/workplaceRoutes');
+console.log('Routes loaded successfully');
 
 // Import middleware
 const ErrorHandler = require('./middleware/errorHandler');
 
 // Import database connection
+console.log('Loading database configuration...');
 const { pool } = require('./config/db');
+console.log('Database configuration loaded');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -102,12 +130,28 @@ process.on('SIGTERM', async () => {
 
 // Start server
 // Listen on 0.0.0.0 to accept connections from Cloud Run
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Flock Manager API server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API Base URL: http://localhost:${PORT}/api`);
-});
+console.log(`Attempting to start server on port ${PORT}...`);
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Flock Manager API server running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Health check: http://0.0.0.0:${PORT}/health`);
+    console.log(`📚 API Base URL: http://0.0.0.0:${PORT}/api`);
+    console.log('✅ Server started successfully and listening for connections');
+  });
+
+  server.on('error', (err) => {
+    console.error('❌ Server error:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  console.error(error.stack);
+  process.exit(1);
+}
 
 module.exports = app;
 
